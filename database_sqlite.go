@@ -91,3 +91,34 @@ func (db *SqliteDatabase) GetComments(url string) ([]Comment, error) {
 
 	return comments, rows.Err()
 }
+
+func (db *SqliteDatabase) GetCommentsWithParent(url string, parentID string) ([]Comment, error) {
+	statement := `
+		SELECT rowid, url, comment, name, time, parent FROM comments WHERE url=? and parent=? ;
+	`
+	rows, err := db.Query(statement, url, parentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	comments := []Comment{}
+	for rows.Next() {
+		c := Comment{}
+		if err = rows.Scan(&c.ID, &c.URL, &c.Comment, &c.Name, &c.Timestamp, &c.Parent); err != nil {
+			return nil, err
+		}
+		comments = append(comments, c)
+	}
+
+	return comments, rows.Err()
+
+}
+
+func (db *SqliteDatabase) UpdateComment(c *Comment) (*Comment, error) {
+	statement := `
+		UPDATE comments SET comment=?, time=? WHERE url=? and rowid=?;
+	`
+	_, err := db.Exec(statement, c.Comment, time.Now(), c.URL, c.ID)
+	return nil, err
+}

@@ -111,6 +111,71 @@ func CreateCommentHandler(w http.ResponseWriter, r *http.Request) {
 	result.render(w)
 }
 
+// UpdateCommentHandler handles the '/update' endpoint that is used to update
+// comment. It requires the following request body values:
+//	   - id: ID of the comment
+//     - comment: the comment text itself
+//     - url: the URL associated with this comment
+func UpdateCommentsHandler(w http.ResponseWriter, r *http.Request) {
+	result := &resultContainer{}
+	var err error
+
+	if r.Method != "POST" {
+		result.Status = http.StatusMethodNotAllowed
+		result.Message = errorList["err.request.method.invalid"].Error()
+		result.render(w)
+		return
+	}
+
+	requiredFields := []string{"name", "parent", "comment", "url", "id"}
+	for _, field := range requiredFields {
+		if strings.TrimSpace(r.PostFormValue(field)) == "" {
+			result.Status = http.StatusBadRequest
+			result.Message = errorList["err.request.field.missing"].Error()
+			result.render(w)
+			return
+		}
+	}
+
+	if r.PostFormValue("gotcha") != "" {
+		result.Success = true
+		result.Message = "Comment successfully created"
+		result.render(w)
+		return
+	}
+
+	comment := Comment{}
+
+	comment.ID, err = strconv.Atoi(template.HTMLEscapeString(r.PostFormValue("id")))
+
+	comment.Name = template.HTMLEscapeString(r.PostFormValue("name"))
+
+	comment.Comment = template.HTMLEscapeString(r.PostFormValue("comment"))
+
+	comment.URL = r.PostFormValue("url")
+
+	comment.Parent, err = strconv.Atoi(r.PostFormValue("parent"))
+	if err != nil || comment.Parent < -1 {
+		result.Status = http.StatusBadRequest
+		result.Message = errorList["err.request.field.invalid"].Error()
+		result.render(w)
+		return
+	}
+
+	_, err = db.UpdateComment(&comment)
+	// err = db.CreateComment(&comment)
+	if err != nil {
+		result.Status = http.StatusInternalServerError
+		result.Message = errorList["err.internal"].Error()
+		result.render(w)
+		return
+	}
+
+	result.Success = true
+	result.Message = "Comment successfully created"
+	result.render(w)
+}
+
 // GetCommentsHandler handles the '/get' endpoint that is used to retrieve
 // all the comments for a particular URL. It takes one value:
 //     - url: the URL associated with this comment
@@ -135,8 +200,16 @@ func GetCommentsHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	var parent string
+	parent = r.PostFormValue("parent")
+	fmt.Println("PostFormValue:parent:", parent)
+	if parent != "" {
+		comments, err = db.GetCommentsWithParent(r.PostFormValue("url"), parent)
 
-	comments, err = db.GetComments(r.PostFormValue("url"))
+	} else {
+		comments, err = db.GetComments(r.PostFormValue("url"))
+	}
+
 	if err != nil {
 		result.Status = http.StatusInternalServerError
 		result.Message = errorList["err.internal"].Error()

@@ -16,4 +16,6 @@ type Comment struct {
 type CommentService interface {
 	CreateComment(comment *Comment) error
 	GetComments(url string) ([]Comment, error)
+	GetCommentsWithParent(url string, parentID string) ([]Comment, error)
+	UpdateComment(comment *Comment) (*Comment, error)
 }

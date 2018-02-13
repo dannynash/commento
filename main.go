@@ -34,6 +34,7 @@ func main() {
 	http.HandleFunc("/", IndexHandler)
 	http.HandleFunc("/create", CreateCommentHandler)
 	http.HandleFunc("/get", GetCommentsHandler)
+	http.HandleFunc("/update", UpdateCommentsHandler)
 
 	port := os.Getenv("COMMENTO_PORT")
 	svr := &http.Server{
